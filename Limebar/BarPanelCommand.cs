@@ -31,15 +31,36 @@ namespace Limebar
             string content = string.Empty;
 
             string dynamicContent = runCommand(this.Command, this.Options);
-            dynamicContent = dynamicContent.TrimEnd('\r', '\n');
-            if (LayoutString != null && LayoutString.Length > 0)
+
+            var lines = dynamicContent.Split(newLine, StringSplitOptions.None);
+
+            if (lines != null)
             {
-                content = LayoutString;
-                content = content.Replace("{content}", dynamicContent);
-            }
-            else
-            {
-                content = dynamicContent;
+                if (lines.Length > 0)
+                {
+                    dynamicContent = lines[0];
+
+                    if (LayoutString != null && LayoutString.Length > 0)
+                    {
+                        content = LayoutString;
+                        content = content.Replace("{content}", dynamicContent);
+                    }
+                    else
+                    {
+                        content = dynamicContent;
+                    }
+
+                }
+
+                if (lines.Length > 1)
+                {
+                    TooltipText = string.Empty;
+
+                    for (int index = 1; index < lines.Length; index++)
+                    {
+                        TooltipText += lines[index] + Environment.NewLine;
+                    }
+                }
             }
 
             lastUpdated = DateTime.Now;

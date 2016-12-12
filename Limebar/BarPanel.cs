@@ -36,6 +36,11 @@ namespace Limebar
         protected System.Windows.Threading.DispatcherTimer timer = new System.Windows.Threading.DispatcherTimer();
 
         /// <summary>
+        /// Array containing newline for splitting up result strings
+        /// </summary>
+        protected readonly string[] newLine = { Environment.NewLine };
+
+        /// <summary>
         /// The type of panel this is
         /// </summary>
         public string PanelType { get; set; }
@@ -64,6 +69,11 @@ namespace Limebar
         /// The text to display in the panel
         /// </summary>
         public string Text { get; set; }
+
+        /// <summary>
+        /// The text to display on a tooltip over the panel
+        /// </summary>
+        public string TooltipText { get; set; }
 
         /// <summary>
         /// How to align the content
@@ -110,6 +120,11 @@ namespace Limebar
         /// The Font Family for the panel. Leave blank for system default.
         /// </summary>
         public string Font { get; set; }
+
+        /// <summary>
+        /// Whether to show a tooltip with additional data when the user hovers over the panel
+        /// </summary>
+        public bool ShowTooltip { get; set; }
 
 
         /// <summary>

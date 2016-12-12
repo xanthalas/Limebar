@@ -200,6 +200,14 @@ namespace Limebar
                     var margin = newLabel.Margin;
                     newLabel.Margin = new Thickness(0);
                     newLabel.Padding = new Thickness(0);
+
+                    if (panel.ShowTooltip)
+                    {
+                        ToolTip tooltip = new ToolTip();
+                        tooltip.Content = removeTrailingBlankLines(panel.TooltipText);
+                        newLabel.ToolTip = tooltip;
+                    }
+
                     mainPanel.Children.Add(newLabel);
 
                 }
@@ -215,9 +223,47 @@ namespace Limebar
                     if (panel != null)
                     {
                         label.Content = panel.Text;
+
+                        if (panel.ShowTooltip)
+                        {
+                            var tooltip = label.ToolTip as ToolTip;
+                            tooltip.Content = removeTrailingBlankLines(panel.TooltipText);
+                        }
                     }
                 }
             }
+        }
+
+        private string removeTrailingBlankLines(string input)
+        {
+            if (input == null)
+            {
+                return string.Empty;
+            }
+
+            string result = string.Empty;
+
+            bool foundNonBlankLine = false;
+
+            var lines = input.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+
+            for (int index = lines.Length - 1; index >= 0; index --)
+            {
+                if (lines[index].Trim().Length > 0)
+                {
+                    result = lines[index] += Environment.NewLine + result;
+                    foundNonBlankLine = true;
+                }
+                else
+                {
+                    if (foundNonBlankLine)
+                    {
+                        result = lines[index] += Environment.NewLine + result;
+                    }
+                }
+            }
+
+            return result.TrimEnd();
         }
 
         /// <summary>
@@ -309,6 +355,7 @@ namespace Limebar
                         clockPanel.LayoutString = item.LayoutString;
                         clockPanel.Font = item.Font;
                         clockPanel.FontSize = item.FontSize;
+                        clockPanel.ShowTooltip = item.ShowTooltip;
 
                         panels.Add(clockPanel);
                         break;
@@ -331,6 +378,7 @@ namespace Limebar
                         commandPanel.LayoutString = item.LayoutString;
                         commandPanel.Font = item.Font;
                         commandPanel.FontSize = item.FontSize;
+                        commandPanel.ShowTooltip = item.ShowTooltip;
 
                         panels.Add(commandPanel);
                         break;
@@ -353,6 +401,7 @@ namespace Limebar
                         powershellPanel.LayoutString = item.LayoutString;
                         powershellPanel.Font = item.Font;
                         powershellPanel.FontSize = item.FontSize;
+                        powershellPanel.ShowTooltip = item.ShowTooltip;
 
                         panels.Add(powershellPanel);
                         break;
