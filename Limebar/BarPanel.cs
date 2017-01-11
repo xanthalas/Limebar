@@ -15,31 +15,37 @@
 using System;
 using System.ComponentModel;
 using System.Windows.Media;
+using System.IO;
+using System.Management.Automation;
 
 namespace Limebar
 {
     public class BarPanel
     {
+        #region Private members/properties
         /// <summary>
         /// Holds the last time this panel's contents were updated
         /// </summary>
-        protected DateTime lastUpdated = new DateTime(0);
+        private DateTime lastUpdated = new DateTime(0);
 
         /// <summary>
         /// The background worker which updates this panel
         /// </summary>
-        protected BackgroundWorker worker { get; set; }
+        private BackgroundWorker worker { get; set; }
 
         /// <summary>
         /// Timer used to update the panel at the requested interval
         /// </summary>
-        protected System.Windows.Threading.DispatcherTimer timer = new System.Windows.Threading.DispatcherTimer();
+        private System.Windows.Threading.DispatcherTimer timer = new System.Windows.Threading.DispatcherTimer();
 
         /// <summary>
         /// Array containing newline for splitting up result strings
         /// </summary>
-        protected readonly string[] newLine = { Environment.NewLine };
+        private readonly string[] newLine = { Environment.NewLine };
 
+        #endregion
+
+        #region Public members/properties
         /// <summary>
         /// The type of panel this is
         /// </summary>
@@ -131,6 +137,10 @@ namespace Limebar
         /// The Font Size for the panel. Set to -1 for system default.
         /// </summary>
         public int FontSize { get; set; }
+
+        #endregion
+
+        #region Public methods
         public BarPanel()
         {
             PanelType = this.GetType().ToString();
@@ -144,9 +154,67 @@ namespace Limebar
         /// <summary>
         /// Update the contents of this panel
         /// </summary>
-        public virtual void Update()
+        public void Update()
         {
+            string content = string.Empty;
+            string dynamicContent;
+            switch (PanelType)
+            {
+                case "Clock":
+                    dynamicContent = getClockText();
+                    break;
 
+                case "Powershell":
+                    dynamicContent = runScript(this.Command, this.Options);
+                    break;
+
+                case "Command":
+                    dynamicContent = runCommand(this.Command, this.Options);
+                    break;
+
+                case "Text":
+                    dynamicContent = Text;
+                    break;
+
+                default:
+                    dynamicContent = "Invalid panel type. Must be one of: Clock, Powershell, Command";
+                    break;
+            }
+            
+
+            var lines = dynamicContent.Split(newLine, StringSplitOptions.None);
+
+            if (lines != null)
+            {
+                if (lines.Length > 0)
+                {
+                    dynamicContent = lines[0];
+
+                    if (LayoutString != null && LayoutString.Length > 0)
+                    {
+                        content = LayoutString;
+                        content = content.Replace("{content}", dynamicContent);
+                    }
+                    else
+                    {
+                        content = dynamicContent;
+                    }
+                }
+
+                if (lines.Length > 1)
+                {
+                    TooltipText = string.Empty;
+
+                    for (int index = 1; index < lines.Length; index++)
+                    {
+                        TooltipText += lines[index] += Environment.NewLine;
+                    }
+                }
+            }
+
+            lastUpdated = DateTime.Now;
+
+            worker.ReportProgress(100, content);
         }
 
 
@@ -173,19 +241,21 @@ namespace Limebar
         {
             timer.Stop();
         }
+        #endregion
 
+        #region private methods
 
         /// <summary>
         /// Run the asynchronous task each time the timer ticks
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void Timer_Tick(object sender, EventArgs e)
+        private void Timer_Tick(object sender, EventArgs e)
         {
             runTask();
         }
 
-        protected void runTask()
+        private void runTask()
         {
             //If it isn't already running then run the task
             if (!this.worker.IsBusy)
@@ -199,7 +269,7 @@ namespace Limebar
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void Worker_DoWork(object sender, DoWorkEventArgs e)
+        private void Worker_DoWork(object sender, DoWorkEventArgs e)
         {
             this.Update();
         }
@@ -207,14 +277,122 @@ namespace Limebar
 
 
         /// <summary>
-        /// Updates the Text
+        /// Updates the Text of the panel
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void Worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private void Worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             //Console.WriteLine($"Setting Text to {e.UserState as string}");
             Text = e.UserState as String;
         }
+
+
+        /// <summary>
+        /// Retrieve the current time, format it as requested and return the results as a string
+        /// </summary>
+        /// <returns>A string containing the current time</returns>
+        private string getClockText()
+        {
+            var returnString = string.Empty;
+
+            if (Options.Contains("ShowDate"))
+            {
+                returnString += DateTime.Now.ToShortDateString() + " ";
+            }
+
+            if (Options.Contains("ShowSeconds"))
+            {
+                returnString += DateTime.Now.ToLongTimeString();
+            }
+            else
+            {
+                returnString += DateTime.Now.ToShortTimeString();
+            }
+
+            return returnString;
+        }
+
+
+        /// <summary>
+        /// Run the command and return the results as a string
+        /// </summary>
+        /// <returns>A string containing the output from the command</returns>
+        private string runCommand(string command, string parms)
+        {
+            string output = string.Empty;
+
+            try
+            {
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(command);
+                psi.Arguments = parms;
+                psi.RedirectStandardOutput = true;
+                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                psi.CreateNoWindow = true;
+                psi.UseShellExecute = false;
+                System.Diagnostics.Process proc;
+                proc = System.Diagnostics.Process.Start(psi);
+                output = proc.StandardOutput.ReadToEnd();
+
+            }
+            catch (Exception e)
+            {
+                output = $"Command failed: {e.Message}";
+            }
+
+            return output;
+        }
+
+
+        /// <summary>
+        /// Run the Powershell script and return the results as a string
+        /// </summary>
+        /// <returns>A string containing the results of the script</returns>
+        private string runScript(string command, string parms)
+        {
+            string result = string.Empty;
+
+            if (!File.Exists(command))
+            {
+                result = $"Cannot find powershell script {command}";
+            }
+            else
+            {
+                PowerShell powerShell = PowerShell.Create();
+                try
+                {
+                    powerShell.AddScript(command);
+                    var results = powerShell.Invoke();
+
+                    if (powerShell.Streams.Information != null && powerShell.Streams.Information.Count > 0)
+                    {
+                        string message = string.Empty;
+                        foreach (var info in powerShell.Streams.Information)
+                        {
+                            message += info.MessageData.ToString() + Environment.NewLine;
+                        }
+
+                        result = message;
+                    }
+                    else
+                    {
+                        if (results != null && results.Count > 0)
+                        {
+                            result = results[0].ToString();
+                        }
+                    }
+
+                }
+                catch (Exception e)
+                {
+
+                    result = $"Powershell exception: {e.Message}";
+                }
+            }
+
+            return result;
+        }
+
+        #endregion
     }
 }

@@ -30,6 +30,8 @@ namespace Limebar
     /// </summary>
     public partial class MainWindow : Window
     {
+        #region Private members
+
         private Settings settings = new Settings();
 
         private Window invisibleOwnerWindow;
@@ -45,6 +47,9 @@ namespace Limebar
 
         private bool rebuildPanels = true;
 
+        #endregion
+
+        #region Public methods
         public MainWindow()
         {
 
@@ -61,10 +66,13 @@ namespace Limebar
             InitializeComponent();
         }
 
+        #endregion
+
+        #region Private methods
         /// <summary>
         /// Create an invisible window which will own the main one. This is needed to prevent Limebar showing up in the Alt-Tab list.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Window object </returns>
         private Window createInvisibleOwnerWindow()
         {
             Window w = new Window(); // Create helper window
@@ -79,6 +87,9 @@ namespace Limebar
             return w;
         }
 
+        /// <summary>
+        /// Create the bar
+        /// </summary>
         private void createBar()
         {
             this.Height = settings.BarHeight;
@@ -126,26 +137,6 @@ namespace Limebar
 
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            loadConfig(configuration_file);
-            createBar();
-
-            updateAllPanels();
-
-            invisibleOwnerWindow = createInvisibleOwnerWindow();
-            this.Owner = invisibleOwnerWindow;
-
-            timer.Tick += timer_Tick;
-            timer.Interval = new TimeSpan(0, 0, 1);
-
-            this.WindowStyle = WindowStyle.None;
-
-            timer.Start();
-            panels.ForEach(p => p.Start());
-
-
-        }
 
         private void updateAllPanels()
         {
@@ -234,6 +225,11 @@ namespace Limebar
             }
         }
 
+        /// <summary>
+        /// Remove blank lines from the end of the string but keep those embedded within
+        /// </summary>
+        /// <param name="input">String to remove lines from</param>
+        /// <returns>String with trailing blank likes remove</returns>
         private string removeTrailingBlankLines(string input)
         {
             if (input == null)
@@ -270,7 +266,6 @@ namespace Limebar
         /// Load the config file
         /// </summary>
         /// <param name="file"></param>
-        /// <returns></returns>
         private void loadConfig(string file)
         {
             settings = new Settings();
@@ -321,94 +316,38 @@ namespace Limebar
         }
 
         /// <summary>
-        /// Convert each panel to its proper type and add it to the list of panels
+        /// Load the panels into the bar
         /// </summary>
         /// <param name="loadedPanels">The collection of panels as loaded from the config file</param>
         private void loadPanels(List<BarPanel> loadedPanels)
         {
             panels.Clear();
 
-            foreach (var item in loadedPanels)
-            {
-                switch (item.PanelType)
-                {
-                    case "Limebar.BarPanel":
-                        var standardPanel = item as BarPanel;
-                        panels.Add(standardPanel);
-                        break;
-
-                    case "Limebar.BarPanelClock":
-                        var clockPanel = new BarPanelClock();
-
-                        clockPanel.PanelType = item.PanelType;
-                        clockPanel.Name = item.Name;
-                        clockPanel.DisplayOrder = item.DisplayOrder;
-                        clockPanel.WidthPercent = item.WidthPercent;
-                        clockPanel.Text = item.Text;
-                        clockPanel.ContentAlignment = item.ContentAlignment;
-                        clockPanel.Foreground = item.Foreground;
-                        clockPanel.Background = item.Background;
-                        clockPanel.UpdateFrequency = item.UpdateFrequency;
-                        clockPanel.Command = item.Command;
-                        clockPanel.Options = item.Options;
-                        clockPanel.ResultsFilename = item.ResultsFilename;
-                        clockPanel.LayoutString = item.LayoutString;
-                        clockPanel.Font = item.Font;
-                        clockPanel.FontSize = item.FontSize;
-                        clockPanel.ShowTooltip = item.ShowTooltip;
-
-                        panels.Add(clockPanel);
-                        break;
-
-                    case "Limebar.BarPanelCommand":
-                        var commandPanel = new BarPanelCommand();
-
-                        commandPanel.PanelType = item.PanelType;
-                        commandPanel.Name = item.Name;
-                        commandPanel.DisplayOrder = item.DisplayOrder;
-                        commandPanel.WidthPercent = item.WidthPercent;
-                        commandPanel.Text = item.Text;
-                        commandPanel.ContentAlignment = item.ContentAlignment;
-                        commandPanel.Foreground = item.Foreground;
-                        commandPanel.Background = item.Background;
-                        commandPanel.UpdateFrequency = item.UpdateFrequency;
-                        commandPanel.Command = item.Command;
-                        commandPanel.Options = item.Options;
-                        commandPanel.ResultsFilename = item.ResultsFilename;
-                        commandPanel.LayoutString = item.LayoutString;
-                        commandPanel.Font = item.Font;
-                        commandPanel.FontSize = item.FontSize;
-                        commandPanel.ShowTooltip = item.ShowTooltip;
-
-                        panels.Add(commandPanel);
-                        break;
-
-                    case "Limebar.BarPanelPowershell":
-                        var powershellPanel = new BarPanelPowershell();
-
-                        powershellPanel.PanelType = item.PanelType;
-                        powershellPanel.Name = item.Name;
-                        powershellPanel.DisplayOrder = item.DisplayOrder;
-                        powershellPanel.WidthPercent = item.WidthPercent;
-                        powershellPanel.Text = item.Text;
-                        powershellPanel.ContentAlignment = item.ContentAlignment;
-                        powershellPanel.Foreground = item.Foreground;
-                        powershellPanel.Background = item.Background;
-                        powershellPanel.UpdateFrequency = item.UpdateFrequency;
-                        powershellPanel.Command = item.Command;
-                        powershellPanel.Options = item.Options;
-                        powershellPanel.ResultsFilename = item.ResultsFilename;
-                        powershellPanel.LayoutString = item.LayoutString;
-                        powershellPanel.Font = item.Font;
-                        powershellPanel.FontSize = item.FontSize;
-                        powershellPanel.ShowTooltip = item.ShowTooltip;
-
-                        panels.Add(powershellPanel);
-                        break;
-                }
-            }
+            loadedPanels.ForEach(p => panels.Add(p));
         }
 
+        #endregion
+
+        #region Event handlers
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            loadConfig(configuration_file);
+            createBar();
+
+            updateAllPanels();
+
+            invisibleOwnerWindow = createInvisibleOwnerWindow();
+            this.Owner = invisibleOwnerWindow;
+
+            timer.Tick += timer_Tick;
+            timer.Interval = new TimeSpan(0, 0, 1);
+
+            this.WindowStyle = WindowStyle.None;
+
+            timer.Start();
+            panels.ForEach(p => p.Start());
+        }
 
         /// <summary>
         /// Kill the invisible owner window to ensure it all shuts down neatly
@@ -423,5 +362,6 @@ namespace Limebar
             invisibleOwnerWindow.Close();
             invisibleOwnerWindow = null;
         }
+        #endregion
     }
 }
